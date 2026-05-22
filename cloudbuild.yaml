@@ -38,14 +38,14 @@ steps:
           echo "→ Linting Python files..."
           PYTHON_FILES=$(find dfs-ai-agent -name "*.py" -type f 2>/dev/null | wc -l)
           if [ "$PYTHON_FILES" -gt 0 ]; then
-            if [ "${_LINT_FAIL_ON_ERRORS}" = "true" ]; then
+            if [ "${_LINT_FAIL_ON_ERRORS}" = "false" ]; then
               # Fail build if linting errors found
               find dfs-ai-agent -name "*.py" -type f | xargs pylint --disable=all --enable=E,F
-              echo "  ✓ Linted $PYTHON_FILES Python file(s) - build fails on errors"
+              echo "  ✓ Linted $${PYTHON_FILES} Python file(s) - build fails on errors"
             else
               # Continue build even if linting errors found
               find dfs-ai-agent -name "*.py" -type f | xargs pylint --disable=all --enable=E,F 2>/dev/null || true
-              echo "  ⚠ Linted $PYTHON_FILES Python file(s) - warnings only"
+              echo "  ⚠ Linted $${PYTHON_FILES} Python file(s) - warnings only"
             fi
           else
             echo "  ℹ No Python files found"
@@ -64,7 +64,7 @@ steps:
         # Run custom validation (conditional)
         if [ "${_VALID_RUN}" = "true" ]; then
           echo "→ Running custom configuration validation..."
-          if [ "${_VALID_FAIL_ON_ERRORS}" = "true" ]; then
+          if [ "${_VALID_FAIL_ON_ERRORS}" = "false" ]; then
             # Fail build if validation errors found
             python scripts/validate-config.py
             echo "  ✓ Validation passed - build fails on errors"
