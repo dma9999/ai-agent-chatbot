@@ -1,0 +1,15 @@
+{
+  "tools": {
+    "get_info": {
+      "dataStoreTool": {
+        "engineSource": {
+          "dataStoreSources": [{
+            "dataStore": {
+              "name": "projects/603618527498/locations/global/collections/default_collection/dataStores/davin-faq_1778831927829"
+            }
+          }]
+        }
+      }
+    }
+  }
+}

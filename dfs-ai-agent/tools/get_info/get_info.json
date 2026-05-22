@@ -1,0 +1,17 @@
+{
+  "name": "ddf97aca-dce5-4f5d-a655-2e51bb014fb4",
+  "dataStoreTool": {
+    "name": "get_info",
+    "engineSource": {
+      "dataStoreSources": [{
+        "dataStore": {
+          "name": "$env_var",
+          "engineType": "CHAT_ENGINE"
+        }
+      }]
+    },
+    "filterParameterBehavior": "NEVER_INCLUDE"
+  },
+  "executionType": "SYNCHRONOUS",
+  "displayName": "get_info"
+}

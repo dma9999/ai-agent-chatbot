@@ -1,0 +1,6 @@
+{
+  "name": "27ac2bb5-8fad-47e7-ada9-62bbdded54f7",
+  "displayName": "harmful-content",
+  "instruction": "agents/harmful-content/instruction.txt",
+  "tools": ["end_session"]
+}

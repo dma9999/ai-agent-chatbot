@@ -1,0 +1,6 @@
+{
+  "name": "67dd82c1-a02d-418e-85a6-a88950a2ee35",
+  "displayName": "PII-agent",
+  "instruction": "agents/PII-agent/instruction.txt",
+  "tools": ["end_session"]
+}

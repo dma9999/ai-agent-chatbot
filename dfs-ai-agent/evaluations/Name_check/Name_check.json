@@ -1,0 +1,22 @@
+{
+  "name": "db367958-cebc-42a0-95e1-c9db0ac6c3ac",
+  "displayName": "Name check",
+  "golden": {
+    "turns": [{
+      "steps": [{
+        "userInput": {
+          "text": "What is his name?"
+        }
+      }, {
+        "expectation": {
+          "agentResponse": {
+            "role": "agent",
+            "chunks": [{
+              "text": "Davin Ma"
+            }]
+          }
+        }
+      }]
+    }]
+  }
+}
