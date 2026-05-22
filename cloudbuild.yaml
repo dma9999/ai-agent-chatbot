@@ -116,7 +116,15 @@ steps:
           --app-id ${_APP_ID} \
           --project-id ${_PROJECT_ID} \
           --app-path dfs-ai-agent/
-        
+
+        STATUS=$?
+        if [ $STATUS -ne 0 ]; then
+          cxas push dfs-ai-agent/dfs-ai-agent_DEV
+          echo "Deployment successful"
+        else
+          echo "Deployment failed"
+        fi
+
         echo ""
         echo "=========================================="
         echo "✓ Step 2 Complete: App deployed to DEV"
