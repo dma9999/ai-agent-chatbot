@@ -37,7 +37,7 @@ steps:
         if [ "${_LINT_RUN}" = "true" ]; then
           echo "→ Linting Python files..."
           PYTHON_FILES=$(find dfs-ai-agent -name "*.py" -type f 2>/dev/null | wc -l)
-          if [ "$PYTHON_FILES" -gt 0 ]; then
+          if [ "$${PYTHON_FILES}" -gt 0 ]; then
             if [ "${_LINT_FAIL_ON_ERRORS}" = "false" ]; then
               # Fail build if linting errors found
               find dfs-ai-agent -name "*.py" -type f | xargs pylint --disable=all --enable=E,F
