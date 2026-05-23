@@ -120,7 +120,7 @@ steps:
         STATUS=$?
         set -e
         if [ "$$STATUS" -eq 0 ]; then
-          cxas push dfs-ai-agent/dfs-ai-agent_DEV
+          cxas push cxas_app/dfs-ai-agent_DEV
           echo "Deployment successful"
         else
           echo "Deployment failed"
