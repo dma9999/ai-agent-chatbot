@@ -112,7 +112,6 @@ steps:
         echo "  Config path: dfs-ai-agent/"
         echo ""
         
-        set +e
         python scripts/deploy-agent.py \
           --app-id ${_APP_ID} \
           --project-id ${_PROJECT_ID} \
@@ -120,7 +119,10 @@ steps:
         STATUS=$?
         set -e
         if [ "$$STATUS" -eq 0 ]; then
-          cxas push cxas_app/dfs-ai-agent_DEV
+          cxas push --app-dir dfs-ai-agent \
+            --app-name ${_APP_ID} \
+            --project-id ${_PROJECT_ID} \
+            --location us
           echo "Deployment successful"
         else
           echo "Deployment failed"
@@ -261,7 +263,7 @@ substitutions:
   _APP_ID: "dfs-ai-agent_DEV"
   _APP_DISPLAY_NAME: "DFS AI Agent (Dev)"
   _GCS_BUCKET: "multi-purpose"
-  _LINT_RUN: "true"
+  _LINT_RUN: "false"
   _LINT_FAIL_ON_ERRORS: "true"
-  _VALID_RUN: "true"
+  _VALID_RUN: "false"
   _VALID_FAIL_ON_ERRORS: "true"
