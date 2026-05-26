@@ -1,0 +1,183 @@
+steps:
+  # =====================================================================
+  # STEP 1: Verify and Copy Artifacts from Stage to Prod
+  # =====================================================================
+  # What happens:
+  # - Check that embed.html exists in gs://bucket/stage/
+  # - Check that chatbot-ui-fixes.js exists in gs://bucket/stage/
+  # - Copy both files to gs://bucket/prod/
+  # - This ensures prod uses verified, tested artifacts
+  # =====================================================================
+  
+  - name: 'gcr.io/cloud-builders/gsutil'
+    id: 'step-1-verify-stage-artifacts'
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -e
+        echo "=========================================="
+        echo "PROD BUILD - STEP 1: Verify & Copy Artifacts"
+        echo "=========================================="
+        echo ""
+        echo "Verifying stage artifacts exist..."
+        echo ""
+        
+        # Check if stage artifacts exist
+        if ! gsutil -q stat gs://${_GCS_BUCKET}/stage/embed.html; then
+          echo "❌ ERROR: gs://${_GCS_BUCKET}/stage/embed.html not found"
+          exit 1
+        fi
+        echo "  ✓ Found: gs://${_GCS_BUCKET}/stage/embed.html"
+        
+        if ! gsutil -q stat gs://${_GCS_BUCKET}/stage/chatbot-ui-fixes.js; then
+          echo "❌ ERROR: gs://${_GCS_BUCKET}/stage/chatbot-ui-fixes.js not found"
+          exit 1
+        fi
+        echo "  ✓ Found: gs://${_GCS_BUCKET}/stage/chatbot-ui-fixes.js"
+        
+        echo ""
+        echo "Stage artifacts verified. Proceeding with promotion to prod..."
+        echo ""
+        echo "=========================================="
+        echo "✓ Step 1 Complete: Artifacts verified"
+        echo "=========================================="
+    env:
+      - 'GCS_BUCKET=${_GCS_BUCKET}'
+
+  # =====================================================================
+  # STEP 2: Copy Embed Code from Stage to Prod
+  # =====================================================================
+  
+  - name: 'gcr.io/cloud-builders/gsutil'
+    id: 'step-2-copy-embed-to-prod'
+    args:
+      - '-m'
+      - 'cp'
+      - 'gs://${_GCS_BUCKET}/stage/embed.html'
+      - 'gs://${_GCS_BUCKET}/prod/'
+    env:
+      - 'GCS_BUCKET=${_GCS_BUCKET}'
+
+  # =====================================================================
+  # STEP 3: Copy UI Fixes from Stage to Prod
+  # =====================================================================
+  
+  - name: 'gcr.io/cloud-builders/gsutil'
+    id: 'step-3-copy-ui-fixes-to-prod'
+    args:
+      - '-m'
+      - 'cp'
+      - 'gs://${_GCS_BUCKET}/stage/chatbot-ui-fixes.js'
+      - 'gs://${_GCS_BUCKET}/prod/'
+    env:
+      - 'GCS_BUCKET=${_GCS_BUCKET}'
+
+  # =====================================================================
+  # STEP 4: Deploy App to PROD CX Agent Studio
+  # =====================================================================
+  # What happens:
+  # - Uses scrapi to push dfs-ai-agent/ config to the PROD CX Studio app
+  # - The PROD CX Studio app ID is: ${_APP_ID}
+  # - This updates the agent instructions, tools, guardrails, etc. for prod
+  # =====================================================================
+  
+  - name: 'python:3.10'
+    id: 'step-4-deploy-to-studio'
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set +e
+        echo "=========================================="
+        echo "PROD BUILD - STEP 4: Deploy to PROD CX Agent Studio"
+        echo "=========================================="
+        echo ""
+        
+        # Install scrapi
+        pip install -q cxas-scrapi
+        
+        # Deploy agent config using scrapi
+        echo "→ Pushing agent config to PROD CX Studio..."
+        echo "  App ID: ${_APP_ID}"
+        echo "  Project: ${_PROJECT_ID}"
+        echo "  Config path: dfs-ai-agent/"
+        echo ""
+        
+        python scripts/deploy-agent.py \
+          --app-id ${_APP_ID} \
+          --project-id ${_PROJECT_ID} \
+          --app-path dfs-ai-agent/
+        STATUS=$?
+        set -e
+        if [ "$$STATUS" -eq 0 ]; then
+          cxas push --app-dir dfs-ai-agent \
+            --app-name ${_APP_ID} \
+            --project-id ${_PROJECT_ID} \
+            --location us
+          echo "✓ Deployment to PROD CX Studio successful"
+        else
+          echo "❌ Deployment to PROD CX Studio failed"
+          exit 1
+        fi
+
+        echo ""
+        echo "=========================================="
+        echo "✓ Step 4 Complete: App deployed to PROD"
+        echo "=========================================="
+    env:
+      - 'PROJECT_ID=${_PROJECT_ID}'
+
+  # =====================================================================
+  # STEP 5: Final Summary and Promotion Complete
+  # =====================================================================
+  
+  - name: 'gcr.io/cloud-builders/gsutil'
+    id: 'step-5-promotion-complete'
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        echo ""
+        echo "╔========================================════════════════════╗"
+        echo "║  ✓ PRODUCTION PROMOTION COMPLETE                         ║"
+        echo "╚════════════════════════════════════════════════════════╝"
+        echo ""
+        echo "The following artifacts have been promoted from STAGE → PROD:"
+        echo ""
+        echo "  1. gs://${_GCS_BUCKET}/prod/embed.html"
+        echo "  2. gs://${_GCS_BUCKET}/prod/chatbot-ui-fixes.js"
+        echo ""
+        echo "  Production CX Agent Studio App: ${_APP_ID}"
+        echo ""
+        echo "IMPORTANT: Verify in your CX Agent Studio dashboard that:"
+        echo "  ✓ App config is correct (instructions, tools, guardrails)"
+        echo "  ✓ All integrations are working"
+        echo "  ✓ No errors in logs"
+        echo ""
+        echo "To roll back, re-run stage build and copy stage artifacts again."
+        echo ""
+
+# =====================================================================
+# BUILD CONFIGURATION
+# =====================================================================
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: '1800s'
+
+# =====================================================================
+# SUBSTITUTION VARIABLES
+# =====================================================================
+# These are the defaults for prod
+# NOTE: This build is manually triggered, not automated
+# =====================================================================
+
+substitutions:
+  _PROJECT_ID: "YOUR_GCP_PROJECT_ID"
+  _GCP_REGION: "us-central1"
+  _ENVIRONMENT: "prod"
+  _APP_ID: "your-app-id-prod"
+  _APP_DISPLAY_NAME: "Your AI Agent (Prod)"
+  _GCS_BUCKET: "your-artifacts-bucket"

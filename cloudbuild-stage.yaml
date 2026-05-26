@@ -17,7 +17,7 @@ steps:
       - |
         set -e
         echo "=========================================="
-        echo "STEP 1: Validate Configuration"
+        echo "STAGE BUILD - STEP 1: Validate Configuration"
         echo "=========================================="
         echo ""
         echo "Configuration:"
@@ -82,11 +82,11 @@ steps:
         echo "=========================================="
 
   # =====================================================================
-  # STEP 2: Deploy/Push Updated App to DEV CX Agent Studio
+  # STEP 2: Deploy/Push Updated App to STAGE CX Agent Studio
   # =====================================================================
   # What happens:
-  # - Uses scrapi to push dfs-ai-agent/ config to the DEV CX Studio app
-  # - The DEV CX Studio app ID is: ${_APP_ID}
+  # - Uses scrapi to push dfs-ai-agent/ config to the STAGE CX Studio app
+  # - The STAGE CX Studio app ID is: ${_APP_ID}
   # - This updates the agent instructions, tools, guardrails, etc.
   # =====================================================================
   
@@ -98,7 +98,7 @@ steps:
       - |
         set +e
         echo "=========================================="
-        echo "STEP 2: Deploy to DEV CX Agent Studio"
+        echo "STAGE BUILD - STEP 2: Deploy to STAGE CX Agent Studio"
         echo "=========================================="
         echo ""
         
@@ -106,7 +106,7 @@ steps:
         pip install -q cxas-scrapi
         
         # Deploy agent config using scrapi
-        echo "→ Pushing agent config to DEV CX Studio..."
+        echo "→ Pushing agent config to STAGE CX Studio..."
         echo "  App ID: ${_APP_ID}"
         echo "  Project: ${_PROJECT_ID}"
         echo "  Config path: dfs-ai-agent/"
@@ -130,7 +130,7 @@ steps:
 
         echo ""
         echo "=========================================="
-        echo "✓ Step 2 Complete: App deployed to DEV"
+        echo "✓ Step 2 Complete: App deployed to STAGE"
         echo "=========================================="
     env:
       - 'PROJECT_ID=${_PROJECT_ID}'
@@ -140,7 +140,7 @@ steps:
   # =====================================================================
   # What happens:
   # - Creates embed.html with the chat messenger script tags
-  # - Adds initialization code for the DEV app
+  # - Adds initialization code for the STAGE app
   # - Includes src/chatbot-ui-fixes.js for UI customizations
   # - Bundles everything your team needs to add to their website
   # =====================================================================
@@ -153,14 +153,14 @@ steps:
       - |
         set -e
         echo "=========================================="
-        echo "STEP 3: Generate Embed Code"
+        echo "STAGE BUILD - STEP 3: Generate Embed Code"
         echo "=========================================="
         echo ""
         
         # Create HTML embed file with script tags
         echo "→ Generating embed code..."
         python scripts/generate-embed-code.py \
-          --env dev \
+          --env stage \
           --app-id ${_APP_ID} \
           --output embed.html
         
@@ -179,10 +179,10 @@ steps:
         echo "=========================================="
 
   # =====================================================================
-  # STEP 4: Upload Embed Code and UI Fixes to GCS Bucket
+  # STEP 4: Upload Embed Code and UI Fixes to GCS Bucket (Stage)
   # =====================================================================
   # What happens:
-  # - Uploads embed.html to GCS bucket (gs://bucket/dev/)
+  # - Uploads embed.html to GCS bucket (gs://bucket/stage/)
   # - Uploads chatbot-ui-fixes.js to same location
   # - Files are publicly accessible for teams to download
   # =====================================================================
@@ -192,7 +192,7 @@ steps:
     args:
       - 'cp'
       - 'embed.html'
-      - 'gs://${_GCS_BUCKET}/dev/'
+      - 'gs://${_GCS_BUCKET}/stage/'
     env:
       - 'GCS_BUCKET=${_GCS_BUCKET}'
   
@@ -201,7 +201,7 @@ steps:
     args:
       - 'cp'
       - 'src/chatbot-ui-fixes.js'
-      - 'gs://${_GCS_BUCKET}/dev/'
+      - 'gs://${_GCS_BUCKET}/stage/'
     env:
       - 'GCS_BUCKET=${_GCS_BUCKET}'
   
@@ -217,16 +217,16 @@ steps:
         echo "✓ Step 4 Complete: Files Uploaded to GCS"
         echo "=========================================="
         echo ""
-        echo "Your dev chatbot embed is ready!"
+        echo "Your stage chatbot embed is ready!"
         echo ""
         echo "Files available at:"
-        echo "  1. gs://${_GCS_BUCKET}/dev/embed.html"
-        echo "  2. gs://${_GCS_BUCKET}/dev/chatbot-ui-fixes.js"
+        echo "  1. gs://${_GCS_BUCKET}/stage/embed.html"
+        echo "  2. gs://${_GCS_BUCKET}/stage/chatbot-ui-fixes.js"
         echo ""
         echo "For your team to use:"
         echo ""
         echo "1. Download embed.html:"
-        echo "   gsutil cp gs://${_GCS_BUCKET}/dev/embed.html ."
+        echo "   gsutil cp gs://${_GCS_BUCKET}/stage/embed.html ."
         echo ""
         echo "2. Add to your website's <head> section:"
         echo "   <link rel=\"stylesheet\" href=\"...\">"
@@ -236,7 +236,7 @@ steps:
         echo "   <script>window.chatConfig = {...}</script>"
         echo ""
         echo "4. Include UI customizations:"
-        echo "   <script src=\"gs://${_GCS_BUCKET}/dev/chatbot-ui-fixes.js\"></script>"
+        echo "   <script src=\"gs://${_GCS_BUCKET}/stage/chatbot-ui-fixes.js\"></script>"
         echo ""
 
 # =====================================================================
@@ -251,17 +251,17 @@ timeout: '1800s'
 # =====================================================================
 # SUBSTITUTION VARIABLES (per-trigger overrides)
 # =====================================================================
-# These are the defaults for dev branch
+# These are the defaults for stage branch
 # When you set up the Cloud Build trigger in the UI,
-# you can override these for stage/prod
+# you can override these for different branches
 # =====================================================================
 
 substitutions:
   _PROJECT_ID: "YOUR_GCP_PROJECT_ID"
   _GCP_REGION: "us-central1"
-  _ENVIRONMENT: "dev"
-  _APP_ID: "your-app-id-dev"
-  _APP_DISPLAY_NAME: "Your AI Agent (Dev)"
+  _ENVIRONMENT: "stage"
+  _APP_ID: "your-app-id-stage"
+  _APP_DISPLAY_NAME: "Your AI Agent (Stage)"
   _GCS_BUCKET: "your-artifacts-bucket"
   _LINT_RUN: "false"
   _LINT_FAIL_ON_ERRORS: "true"

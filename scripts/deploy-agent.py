@@ -4,6 +4,7 @@ Deploy agent configuration to CX Agent Studio using scrapi.
 """
 
 import argparse
+from html import parser
 import json
 import sys
 from pathlib import Path
