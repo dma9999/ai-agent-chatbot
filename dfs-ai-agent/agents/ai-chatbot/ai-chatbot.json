@@ -1,0 +1,6 @@
+{
+  "name": "d9d7ee3c-b24e-4829-864e-3a5081c9cab3",
+  "displayName": "ai-chatbot",
+  "instruction": "agents/ai-chatbot/instruction.txt",
+  "tools": ["get_info"]
+}

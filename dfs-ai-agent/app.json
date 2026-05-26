@@ -1,0 +1,16 @@
+{
+  "name": "d9454407-6f5d-4e79-a2de-d52baac1ee87",
+  "displayName": "dfs-ai-agent",
+  "rootAgent": "Root agent",
+  "loggingSettings": {
+    "conversationLoggingSettings": {
+      "retentionWindow": "31536000s"
+    }
+  },
+  "guardrails": ["Default Safety Guardrail", "Default Prompt Guardrail"],
+  "dataStoreSettings": {
+  },
+  "timeZoneSettings": {
+    "timeZone": "America/Los_Angeles"
+  }
+}

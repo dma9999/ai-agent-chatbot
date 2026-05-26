@@ -1,0 +1,7 @@
+{
+  "name": "393d7443-103d-40d2-acd9-4ee954ef51c0",
+  "displayName": "Root agent",
+  "instruction": "agents/Root_agent/instruction.txt",
+  "tools": ["end_session"],
+  "childAgents": ["PII-agent", "ai-chatbot", "farewell-agent", "harmful-content"]
+}

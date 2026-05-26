@@ -1,0 +1,6 @@
+{
+  "name": "b68dfe6a-677d-46db-8a47-fd6b5b2ca1d1",
+  "displayName": "farewell-agent",
+  "instruction": "agents/farewell-agent/instruction.txt",
+  "tools": ["end_session"]
+}

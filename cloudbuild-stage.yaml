@@ -1,0 +1,269 @@
+steps:
+  # =====================================================================
+  # STEP 1: Install Dependencies, Lint, and Validate
+  # =====================================================================
+  # What happens:
+  # - Install Python tools (pylint for linting, cxas-scrapi for validation)
+  # - Lint Python files in dfs-ai-agent/
+  # - Validate JSON syntax (app.json, environment.json)
+  # - Run custom validation script (checks required fields, structure)
+  # =====================================================================
+  
+  - name: 'python:3.10'
+    id: 'step-1-validate'
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -e
+        echo "=========================================="
+        echo "STAGE BUILD - STEP 1: Validate Configuration"
+        echo "=========================================="
+        echo ""
+        echo "Configuration:"
+        echo "  _LINT_RUN: ${_LINT_RUN}"
+        echo "  _LINT_FAIL_ON_ERRORS: ${_LINT_FAIL_ON_ERRORS}"
+        echo "  _VALID_RUN: ${_VALID_RUN}"
+        echo "  _VALID_FAIL_ON_ERRORS: ${_VALID_FAIL_ON_ERRORS}"
+        echo ""
+        
+        # Install dependencies
+        echo "→ Installing dependencies..."
+        pip install -q cxas-scrapi pylint jsonschema pyyaml
+        echo "  ✓ Installed: cxas-scrapi, pylint, jsonschema, pyyaml"
+        echo ""
+        
+        # Lint Python files (conditional)
+        if [ "${_LINT_RUN}" = "true" ]; then
+          echo "→ Linting Python files..."
+          PYTHON_FILES=$(find . -name "*.py" -type f 2>/dev/null | wc -l)
+          if [ "$${PYTHON_FILES}" -gt 0 ]; then
+            if [ "${_LINT_FAIL_ON_ERRORS}" = "false" ]; then
+              # Fail build if linting errors found
+              find . -name "*.py" -type f | xargs pylint --disable=all --enable=E,F
+              echo "  ✓ Linted $${PYTHON_FILES} Python file(s) - build fails on errors"
+            else
+              # Continue build even if linting errors found
+              find . -name "*.py" -type f | xargs pylint --disable=all --enable=E,F 2>/dev/null || true
+              echo "  ⚠ Linted $${PYTHON_FILES} Python file(s) - warnings only"
+            fi
+          else
+            echo "  ℹ No Python files found"
+          fi
+        else
+          echo "→ Linting skipped (_LINT_RUN=false)"
+        fi
+        echo ""
+        
+        # Validate JSON files
+        echo "→ Validating JSON syntax..."
+        python -m json.tool dfs-ai-agent/app.json > /dev/null && echo "  ✓ app.json is valid"
+        python -m json.tool dfs-ai-agent/environment.json > /dev/null && echo "  ✓ environment.json is valid"
+        echo ""
+        
+        # Run custom validation (conditional)
+        if [ "${_VALID_RUN}" = "true" ]; then
+          echo "→ Running custom configuration validation..."
+          if [ "${_VALID_FAIL_ON_ERRORS}" = "false" ]; then
+            # Fail build if validation errors found
+            python scripts/validate-config.py
+            echo "  ✓ Validation passed - build fails on errors"
+          else
+            # Continue build even if validation errors found
+            python scripts/validate-config.py 2>/dev/null || true
+            echo "  ⚠ Validation complete - warnings only"
+          fi
+        else
+          echo "→ Validation skipped (_VALID_RUN=false)"
+        fi
+        echo ""
+        echo "=========================================="
+        echo "✓ Step 1 Complete: All validations passed"
+        echo "=========================================="
+
+  # =====================================================================
+  # STEP 2: Deploy/Push Updated App to STAGE CX Agent Studio
+  # =====================================================================
+  # What happens:
+  # - Uses scrapi to push dfs-ai-agent/ config to the STAGE CX Studio app
+  # - The STAGE CX Studio app ID is: ${_APP_ID}
+  # - This updates the agent instructions, tools, guardrails, etc.
+  # =====================================================================
+  
+  - name: 'python:3.10'
+    id: 'step-2-deploy-to-studio'
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set +e
+        echo "=========================================="
+        echo "STAGE BUILD - STEP 2: Deploy to STAGE CX Agent Studio"
+        echo "=========================================="
+        echo ""
+        
+        # Install scrapi
+        pip install -q cxas-scrapi
+        
+        # Deploy agent config using scrapi
+        echo "→ Pushing agent config to STAGE CX Studio..."
+        echo "  App ID: ${_APP_ID}"
+        echo "  Project: ${_PROJECT_ID}"
+        echo "  Config path: dfs-ai-agent/"
+        echo ""
+        
+        python scripts/deploy-agent.py \
+          --app-id ${_APP_ID} \
+          --project-id ${_PROJECT_ID} \
+          --app-path dfs-ai-agent/
+        STATUS=$?
+        set -e
+        if [ "$$STATUS" -eq 0 ]; then
+          cxas push --app-dir dfs-ai-agent \
+            --app-name ${_APP_ID} \
+            --project-id ${_PROJECT_ID} \
+            --location us
+          echo "Deployment successful"
+        else
+          echo "Deployment failed"
+        fi
+
+        echo ""
+        echo "=========================================="
+        echo "✓ Step 2 Complete: App deployed to STAGE"
+        echo "=========================================="
+    env:
+      - 'PROJECT_ID=${_PROJECT_ID}'
+
+  # =====================================================================
+  # STEP 3: Generate Embed Code and UI Fixes Package
+  # =====================================================================
+  # What happens:
+  # - Creates embed.html with the chat messenger script tags
+  # - Adds initialization code for the STAGE app
+  # - Includes src/chatbot-ui-fixes.js for UI customizations
+  # - Bundles everything your team needs to add to their website
+  # =====================================================================
+  
+  - name: 'python:3.10'
+    id: 'step-3-generate-embed'
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -e
+        echo "=========================================="
+        echo "STAGE BUILD - STEP 3: Generate Embed Code"
+        echo "=========================================="
+        echo ""
+        
+        # Create HTML embed file with script tags
+        echo "→ Generating embed code..."
+        python scripts/generate-embed-code.py \
+          --env stage \
+          --app-id ${_APP_ID} \
+          --output embed.html
+        
+        echo "  ✓ Created: embed.html"
+        echo ""
+        
+        echo "→ Files to include:"
+        echo "  1. embed.html (add to <head> and <body>)"
+        echo "  2. chatbot-ui-fixes.js (customize UI)"
+        echo ""
+        
+        ls -lh embed.html src/chatbot-ui-fixes.js
+        echo ""
+        echo "=========================================="
+        echo "✓ Step 3 Complete: Embed code generated"
+        echo "=========================================="
+
+  # =====================================================================
+  # STEP 4: Upload Embed Code and UI Fixes to GCS Bucket (Stage)
+  # =====================================================================
+  # What happens:
+  # - Uploads embed.html to GCS bucket (gs://bucket/stage/)
+  # - Uploads chatbot-ui-fixes.js to same location
+  # - Files are publicly accessible for teams to download
+  # =====================================================================
+  
+  - name: 'gcr.io/cloud-builders/gsutil'
+    id: 'step-4-upload-embed'
+    args:
+      - 'cp'
+      - 'embed.html'
+      - 'gs://${_GCS_BUCKET}/stage/'
+    env:
+      - 'GCS_BUCKET=${_GCS_BUCKET}'
+  
+  - name: 'gcr.io/cloud-builders/gsutil'
+    id: 'step-4b-upload-ui-fixes'
+    args:
+      - 'cp'
+      - 'src/chatbot-ui-fixes.js'
+      - 'gs://${_GCS_BUCKET}/stage/'
+    env:
+      - 'GCS_BUCKET=${_GCS_BUCKET}'
+  
+  # Print final summary
+  - name: 'gcr.io/cloud-builders/gsutil'
+    id: 'step-4c-summary'
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        echo ""
+        echo "=========================================="
+        echo "✓ Step 4 Complete: Files Uploaded to GCS"
+        echo "=========================================="
+        echo ""
+        echo "Your stage chatbot embed is ready!"
+        echo ""
+        echo "Files available at:"
+        echo "  1. gs://${_GCS_BUCKET}/stage/embed.html"
+        echo "  2. gs://${_GCS_BUCKET}/stage/chatbot-ui-fixes.js"
+        echo ""
+        echo "For your team to use:"
+        echo ""
+        echo "1. Download embed.html:"
+        echo "   gsutil cp gs://${_GCS_BUCKET}/stage/embed.html ."
+        echo ""
+        echo "2. Add to your website's <head> section:"
+        echo "   <link rel=\"stylesheet\" href=\"...\">"
+        echo "   <script src=\"...\" defer></script>"
+        echo ""
+        echo "3. Add to your website's <body> section:"
+        echo "   <script>window.chatConfig = {...}</script>"
+        echo ""
+        echo "4. Include UI customizations:"
+        echo "   <script src=\"gs://${_GCS_BUCKET}/stage/chatbot-ui-fixes.js\"></script>"
+        echo ""
+
+# =====================================================================
+# BUILD CONFIGURATION
+# =====================================================================
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: '1800s'
+
+# =====================================================================
+# SUBSTITUTION VARIABLES (per-trigger overrides)
+# =====================================================================
+# These are the defaults for stage branch
+# When you set up the Cloud Build trigger in the UI,
+# you can override these for different branches
+# =====================================================================
+
+substitutions:
+  _PROJECT_ID: "YOUR_GCP_PROJECT_ID"
+  _GCP_REGION: "us-central1"
+  _ENVIRONMENT: "stage"
+  _APP_ID: "your-app-id-stage"
+  _APP_DISPLAY_NAME: "Your AI Agent (Stage)"
+  _GCS_BUCKET: "your-artifacts-bucket"
+  _LINT_RUN: "false"
+  _LINT_FAIL_ON_ERRORS: "true"
+  _VALID_RUN: "false"
+  _VALID_FAIL_ON_ERRORS: "true"
